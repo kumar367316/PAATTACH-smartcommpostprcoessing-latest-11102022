@@ -14,7 +14,6 @@ public class PostProcessingConstant {
 	public static final String ARCHIVE_TEMP_BACKUP_DIRECTORY = "archive-backup/";
 	public static final String BANNER_DIRECTORY = "banner/";
 	public static final String BANNER_PAGE = "Banner_";
-	public static final String PAATTACHEDIBATCH = "PAAttach";
 	public static final String PROCESS_DIRECTORY = "processed";
 	public static final String SPACE_VALUE = "%20";
 	public static final String EMPTY_SPACE = " ";
@@ -27,4 +26,5 @@ public class PostProcessingConstant {
 	public static final String OUTPUT_DIRECTORY = "output/";
 	public static final String LOG_FILE = "smartcommpostprocessing";
 	public static final String MAIL_FAILURE = "mail sending failure";
+	public static final String EXCEPTION_MSG = " with exceptions";
 }
