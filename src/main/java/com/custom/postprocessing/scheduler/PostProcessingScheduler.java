@@ -1111,6 +1111,7 @@ public class PostProcessingScheduler {
 		for (String ediBatch : ediFormsType) {
 			batchDetailsList.add(ediBatch);
 		}
+		batchDetailsList.add(selfAddressedType);
 		return batchDetailsList;
 	}
 }
