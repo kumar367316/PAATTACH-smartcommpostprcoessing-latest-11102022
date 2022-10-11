@@ -477,7 +477,7 @@ public class PostProcessingScheduler {
 
 				convertPDFToPCL(mergePdfFile, container, currentDateTime);
 				bannerFile.delete();
-				//new File(mergePdfFile).delete();
+				new File(mergePdfFile).delete();
 				new File(blankPage).delete();
 				deleteFiles(claimNbrSortedList);
 			} catch (StorageException storageException) {
