@@ -11,9 +11,7 @@ import static com.custom.postprocessing.constant.PostProcessingConstant.FILE_SEP
 import static com.custom.postprocessing.constant.PostProcessingConstant.LICENSE_DIRECTORY;
 import static com.custom.postprocessing.constant.PostProcessingConstant.LOG_FILE;
 import static com.custom.postprocessing.constant.PostProcessingConstant.OUTPUT_DIRECTORY;
-import static com.custom.postprocessing.constant.PostProcessingConstant.PRINT_DIRECTORY;
 import static com.custom.postprocessing.constant.PostProcessingConstant.PRINT_SUB_DIRECTORY;
-import static com.custom.postprocessing.constant.PostProcessingConstant.PROCESS_DIRECTORY;
 import static com.custom.postprocessing.constant.PostProcessingConstant.ROOT_DIRECTORY;
 import static com.custom.postprocessing.constant.PostProcessingConstant.SPACE_VALUE;
 import static com.custom.postprocessing.constant.PostProcessingConstant.TRANSIT_DIRECTORY;
@@ -144,16 +142,16 @@ public class PostProcessingScheduler {
 		try {
 			deletePreviousLogFile();
 			final CloudBlobContainer container = containerinfo();
-			String targetDirectory = OUTPUT_DIRECTORY + ARCHIVE_TEMP_BACKUP_DIRECTORY + "temp-archive_"
+			String targetTempDirectory = OUTPUT_DIRECTORY + ARCHIVE_TEMP_BACKUP_DIRECTORY + "temp-archive_"
 					+ currentDateTime + "/";
-			moveSourceToTargetDirectory(OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY, targetDirectory, currentDate,
+			moveSourceToTargetDirectory(OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY, targetTempDirectory, currentDate,
 					currentDateTime, container);
-			String transitTargetDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate + "-"
-					+ PROCESS_DIRECTORY + "/" + currentDateTime + PRINT_SUB_DIRECTORY + "/";
-			CloudBlobDirectory printDirectory = getDirectoryName(container, "", transitTargetDirectory);
+			String transitPrintTargetDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime
+					+ PRINT_SUB_DIRECTORY + "/";
+			CloudBlobDirectory printDirectory = getDirectoryName(container, "", transitPrintTargetDirectory);
 			statusMessage = processMetaDataInputFile(printDirectory, currentDateTime, currentDate);
 
-			processCompleteFile(currentDate, currentDateTime);
+			processCompleteFile(currentDateTime);
 
 			String logFile = LOG_FILE;
 			File logFileName = new File(logFile + ".log");
@@ -178,8 +176,8 @@ public class PostProcessingScheduler {
 			String currentDateTime, CloudBlobContainer container) throws StorageException, IOException {
 		BlobContainerClient blobContainerClient = getBlobContainerClient(connectionNameKey, containerName);
 		Iterable<BlobItem> listBlobs = blobContainerClient.listBlobsByHierarchy(sourceDirectory);
-		String targetProcessedPrintDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate + "-"
-				+ PROCESS_DIRECTORY + "/" + currentDateTime + PRINT_SUB_DIRECTORY + "/";
+		String targetProcessedPrintDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime
+				+ PRINT_SUB_DIRECTORY + "/";
 		try {
 			CloudBlobDirectory archiveDirectory = getDirectoryName(container, "", OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY);
 			for (BlobItem blobItem : listBlobs) {
@@ -220,32 +218,32 @@ public class PostProcessingScheduler {
 		if (fileName.contains("archiveOnly")) {
 			boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
 			if (validFileCheck) {
-				archiveOnlyOperation(pdfInputFile, currentDate, currentDateTime);
-				archiveOnlyOperation(xmlInputFile, currentDate, currentDateTime);
+				archiveOnlyOperation(pdfInputFile, currentDateTime);
+				archiveOnlyOperation(xmlInputFile, currentDateTime);
 			} else {
-				failedFileProcessing(xmlInputFile, currentDate, currentDateTime);
-				failedFileProcessing(pdfInputFile, currentDate, currentDateTime);
+				failedFileProcessing(xmlInputFile, currentDateTime);
+				failedFileProcessing(pdfInputFile, currentDateTime);
 			}
 		} else if (fileName.contains("printArchive") && !(fileName.contains("_CC_"))) {
 			boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
 			if (validFileCheck) {
-				archiveOnlyOperation(pdfInputFile, currentDate, currentDateTime);
-				archiveOnlyOperation(xmlInputFile, currentDate, currentDateTime);
+				archiveOnlyOperation(pdfInputFile, currentDateTime);
+				archiveOnlyOperation(xmlInputFile, currentDateTime);
 				copyFileToTargetDirectory(pdfInputFile, "", targetDirectory);
 				copyFileToTargetDirectory(xmlInputFile, "", targetDirectory);
 			} else {
-				failedFileProcessing(xmlInputFile, currentDate, currentDateTime);
-				failedFileProcessing(pdfInputFile, currentDate, currentDateTime);
+				failedFileProcessing(xmlInputFile, currentDateTime);
+				failedFileProcessing(pdfInputFile, currentDateTime);
 			}
 		} else if (fileName.contains("_CC_")) {
 			boolean ccRecipientCountCheck = validateCCRecientFileType(fileName);
 			boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
 			if (!(ccRecipientCountCheck) || !validFileCheck) {
-				failedFileProcessing(xmlInputFile, currentDate, currentDateTime);
-				failedFileProcessing(pdfInputFile, currentDate, currentDateTime);
+				failedFileProcessing(xmlInputFile, currentDateTime);
+				failedFileProcessing(pdfInputFile, currentDateTime);
 			} else {
-				archiveOnlyOperation(pdfInputFile, currentDate, currentDateTime);
-				archiveOnlyOperation(xmlInputFile, currentDate, currentDateTime);
+				archiveOnlyOperation(pdfInputFile, currentDateTime);
+				archiveOnlyOperation(xmlInputFile, currentDateTime);
 				fileName = FilenameUtils.removeExtension(fileName);
 				String fileNameSplit[] = fileName.split("_");
 				int ccNumber = 0;
@@ -256,8 +254,8 @@ public class PostProcessingScheduler {
 			}
 		} else if (fileName.contains("printOnly")) {
 			logger.info("printOnly functionality is not available ");
-			failedFileProcessing(xmlInputFile, currentDate, currentDateTime);
-			failedFileProcessing(pdfInputFile, currentDate, currentDateTime);
+			failedFileProcessing(xmlInputFile, currentDateTime);
+			failedFileProcessing(pdfInputFile, currentDateTime);
 		}
 		new File(xmlInputFile).delete();
 		new File(pdfInputFile).delete();
@@ -385,10 +383,10 @@ public class PostProcessingScheduler {
 		return statusMessage;
 	}
 
-	public void failedFileProcessing(String fileName, String currentDate, String currentDateTime) {
+	public void failedFileProcessing(String fileName, String currentDateTime) {
 		logger.info("incorrect files for processing: " + fileName);
-		String transitTargetDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate + "-"
-				+ PROCESS_DIRECTORY + "/" + currentDateTime + FAILED_SUB_DIRECTORY + "/";
+		String transitTargetDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime
+				+ FAILED_SUB_DIRECTORY + "/";
 		copyFileToTargetDirectory(fileName, "", transitTargetDirectory);
 	}
 
@@ -451,8 +449,7 @@ public class PostProcessingScheduler {
 				pdfMerger.addSource(bannerFileName);
 				pdfMerger.addSource(blankPage);
 				CloudBlobDirectory transitDirectory = getDirectoryName(container,
-						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/",
-						currentDate() + "-" + PROCESS_DIRECTORY + "/" + currentDateTime + PRINT_SUB_DIRECTORY + "/");
+						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/", currentDateTime + PRINT_SUB_DIRECTORY + "/");
 				for (String fileName : fileNameList) {
 					File file = new File(fileName);
 					logger.info("process file for pcl is:" + fileName);
@@ -563,7 +560,7 @@ public class PostProcessingScheduler {
 	}
 
 	public boolean checkBatchTypeOperation(String fileName) {
-		String[] batchTypeList =  PostProcessingConstant.ALL_BATCH_TYPE.split(",");
+		String[] batchTypeList = PostProcessingConstant.ALL_BATCH_TYPE.split(",");
 		for (String ediFormName : batchTypeList) {
 			if (fileName.contains(ediFormName)) {
 				return true;
@@ -693,9 +690,7 @@ public class PostProcessingScheduler {
 			stream.close();
 			outStream.close();
 			fileEditor.setCloseConcatenatedStreams(true);
-			String currentDate = currentDate();
-			copyFileToTargetDirectory(outputPclFile, OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate + "-"
-					+ PROCESS_DIRECTORY + "/" + currentDate + "/", "");
+			copyFileToTargetDirectory(outputPclFile, OUTPUT_DIRECTORY + TRANSIT_DIRECTORY, "");
 			logger.info("generate pcl file is:" + outputPclFile);
 		} catch (Exception exception) {
 			statusMessage = "error in pcl generate";
@@ -713,8 +708,7 @@ public class PostProcessingScheduler {
 				File updatePDFFile = new File(splitFileName[0] + ".pdf");
 				file.renameTo(updatePDFFile);
 				copyFileToTargetDirectory(updatePDFFile.toString(), "",
-						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate + "-" + PROCESS_DIRECTORY + "/"
-								+ currentDate + "/" + currentDateTime + "-" + ARCHIVE_DIRECTORY);
+						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime + "-" + ARCHIVE_DIRECTORY);
 				if (fileDelete) {
 					updatePDFFile.delete();
 				}
@@ -747,8 +741,7 @@ public class PostProcessingScheduler {
 				transformerReference.transform(source, streamResult);
 				file.renameTo(updateXMLFile);
 				copyFileToTargetDirectory(updateXMLFile.toString(), "",
-						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate + "-" + PROCESS_DIRECTORY + "/"
-								+ currentDate + "/" + currentDateTime + "-" + ARCHIVE_DIRECTORY);
+						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime + "-" + ARCHIVE_DIRECTORY);
 				if (fileDelete) {
 					updateXMLFile.delete();
 				}
@@ -763,7 +756,7 @@ public class PostProcessingScheduler {
 		return updatedFile;
 	}
 
-	public void archiveOnlyOperation(String inputFile, String currentDate, String currentDateTime) {
+	public void archiveOnlyOperation(String inputFile, String currentDateTime) {
 		try {
 			String fileExt = FilenameUtils.getExtension(inputFile);
 			File file = new File(inputFile);
@@ -776,8 +769,7 @@ public class PostProcessingScheduler {
 				File updatePDFFile = new File(splitFileName[0] + ".pdf");
 				copyOriginalFile.renameTo(updatePDFFile);
 				copyFileToTargetDirectory(updatePDFFile.toString(), "",
-						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate + "-" + PROCESS_DIRECTORY + "/"
-								+ currentDate + "/" + currentDateTime + "-" + ARCHIVE_DIRECTORY);
+						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime + "-" + ARCHIVE_DIRECTORY);
 
 				updatePDFFile.delete();
 			} else if ("xml".equals(fileExt)) {
@@ -809,8 +801,7 @@ public class PostProcessingScheduler {
 				copyOriginalFile.renameTo(updateXMLFile);
 
 				copyFileToTargetDirectory(updateXMLFile.toString(), "",
-						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate + "-" + PROCESS_DIRECTORY + "/"
-								+ currentDate + "/" + currentDateTime + "-" + ARCHIVE_DIRECTORY);
+						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime + "-" + ARCHIVE_DIRECTORY);
 				updateXMLFile.delete();
 			}
 
@@ -874,7 +865,7 @@ public class PostProcessingScheduler {
 			File updatePrimaryFileName = new File(fileSplitName + "_Primary" + ".pdf");
 			primaryCCRecipeint.renameTo(updatePrimaryFileName);
 			copyFileToTargetDirectory(updatePrimaryFileName.toString(), OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/",
-					currentDate + "-" + PROCESS_DIRECTORY + "/" + currentDateTime + "-" + PRINT_DIRECTORY);
+					currentDateTime + PRINT_SUB_DIRECTORY);
 
 			for (int j = 1; j <= recipeintCount; j++) {
 				PDFMergerUtility pdfMerger = new PDFMergerUtility();
@@ -883,8 +874,8 @@ public class PostProcessingScheduler {
 				pdfMerger.setDestinationFileName(fileSplitName + "_" + j + ".pdf");
 				pdfMerger.mergeDocuments(memoryUsageSetting);
 				String ccRecipeintPDF = fileSplitName + "_" + j + ".pdf";
-				copyFileToTargetDirectory(ccRecipeintPDF, "", OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate
-						+ "-" + PROCESS_DIRECTORY + "/" + currentDateTime + PRINT_SUB_DIRECTORY + "/");
+				copyFileToTargetDirectory(ccRecipeintPDF, "",
+						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime + PRINT_SUB_DIRECTORY + "/");
 				new File(ccRecipeintPDF).delete();
 			}
 			deleteFiles(pdfListFile);
@@ -935,7 +926,7 @@ public class PostProcessingScheduler {
 			xmlInputFile.renameTo(updateXmlFile);
 
 			copyFileToTargetDirectory(updateXmlFile.toString(), OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/",
-					currentDate + "-" + PROCESS_DIRECTORY + "/" + currentDateTime + "-" + PRINT_DIRECTORY);
+					currentDateTime + PRINT_SUB_DIRECTORY);
 
 			splitCCRecipeintXmlFile(updateXmlFile, sheetNumber, numberOfPages, ccNumberCount, currentDate,
 					currentDateTime);
@@ -981,7 +972,7 @@ public class PostProcessingScheduler {
 				transformerReference.transform(source, streamResult);
 				xmlFile.renameTo(updateXmlFile);
 				copyFileToTargetDirectory(updateXmlFile.toString(), OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/",
-						currentDate + "-" + PROCESS_DIRECTORY + "/" + currentDateTime + "-" + PRINT_DIRECTORY);
+						currentDateTime + PRINT_SUB_DIRECTORY);
 				updateXmlFile.delete();
 			}
 			xmlFile.delete();
@@ -999,15 +990,14 @@ public class PostProcessingScheduler {
 		return updateFileName;
 	}
 
-	public void processCompleteFile(String currentDate, String currentDateTime) {
+	public void processCompleteFile(String currentDateTime) {
 		try {
 			String documentFileName = "process-completed" + ".txt";
 			File file = new File(documentFileName);
 			final FileOutputStream outputStream = new FileOutputStream(file);
 			PrintWriter writer = new PrintWriter(outputStream);
 			writer.println("process completed" + '\n');
-			copyFileToTargetDirectory(file.toString(), OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDate + "-"
-					+ PROCESS_DIRECTORY + "/" + currentDate + "/", "");
+			copyFileToTargetDirectory(file.toString(), OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/", "");
 			outputStream.close();
 			writer.close();
 			file.delete();
@@ -1023,8 +1013,8 @@ public class PostProcessingScheduler {
 		File pdfFile = new File(pdfInputFile);
 		try {
 			if (!(pdfFile.exists())) {
-				failedFileProcessing(fileName, currentDate, currentDateTime);
-				failedFileProcessing(pdfFile.toString(), currentDate, currentDateTime);
+				failedFileProcessing(fileName, currentDateTime);
+				failedFileProcessing(pdfFile.toString(), currentDateTime);
 				pdfFile.delete();
 				return false;
 			}
@@ -1047,8 +1037,8 @@ public class PostProcessingScheduler {
 			invalidFileList.add(fileName);
 		}
 		if (!validaXmlFile) {
-			failedFileProcessing(fileName, currentDate, currentDateTime);
-			failedFileProcessing(pdfInputFile, currentDate, currentDateTime);
+			failedFileProcessing(fileName, currentDateTime);
+			failedFileProcessing(pdfInputFile, currentDateTime);
 			pdfFile.delete();
 		}
 		return validaXmlFile;
@@ -1091,8 +1081,8 @@ public class PostProcessingScheduler {
 			invalidFileList.add(xmlInputFile);
 			invalidFileList.add(pdfInputFile);
 			logger.info("processing batch type is not supported");
-			failedFileProcessing(xmlInputFile, currentDate, currentDateTime);
-			failedFileProcessing(pdfInputFile, currentDate, currentDateTime);
+			failedFileProcessing(xmlInputFile, currentDateTime);
+			failedFileProcessing(pdfInputFile, currentDateTime);
 			validBatchType = false;
 		}
 		return validBatchType;
