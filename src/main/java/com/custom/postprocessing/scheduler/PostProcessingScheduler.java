@@ -129,6 +129,8 @@ public class PostProcessingScheduler {
 
 	List<String> invalidFileList = new LinkedList<>();
 
+	String exceptionMessage = "";
+
 	@Scheduled(cron = "${cron-job-print-interval}")
 	public void postProcessing() {
 		smartCommPostProcessing();
@@ -164,12 +166,13 @@ public class PostProcessingScheduler {
 			updateLogFile.delete();
 
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception smartComPostProcessing() " + exception.getMessage());
-			statusMessage = "error in copy file to blob directory";
 		}
-		logger.info(statusMessage);
+		logger.info(statusMessage + exceptionMessage);
 		logger.info("postprocessing ended");
 		deleteFiles(invalidFileList);
+		exceptionMessage = "";
 	}
 
 	private void moveSourceToTargetDirectory(String sourceDirectory, String targetDirectory, String currentDate,
@@ -204,6 +207,7 @@ public class PostProcessingScheduler {
 				}
 			}
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception moveSourceToTargetDirectory() " + exception.getMessage());
 		}
 	}
@@ -214,52 +218,58 @@ public class PostProcessingScheduler {
 
 	public void fileSeparateOperation(String fileName, String currentDate, String currentDateTime,
 			String targetDirectory) {
-		String xmlInputFile = fileName;
-		String pdfInputFile = fileName.replace(".xml", ".pdf");
-		if (fileName.contains("archiveOnly")) {
-			boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
-			if (validFileCheck) {
-				archiveOnlyOperation(pdfInputFile, currentDateTime);
-				archiveOnlyOperation(xmlInputFile, currentDateTime);
-			} else {
-				failedFileProcessing(xmlInputFile, currentDateTime);
-				failedFileProcessing(pdfInputFile, currentDateTime);
-			}
-		} else if (fileName.contains("printArchive") && !(fileName.contains("_CC_"))) {
-			boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
-			if (validFileCheck) {
-				archiveOnlyOperation(pdfInputFile, currentDateTime);
-				archiveOnlyOperation(xmlInputFile, currentDateTime);
-				copyFileToTargetDirectory(pdfInputFile, "", targetDirectory);
-				copyFileToTargetDirectory(xmlInputFile, "", targetDirectory);
-			} else {
-				failedFileProcessing(xmlInputFile, currentDateTime);
-				failedFileProcessing(pdfInputFile, currentDateTime);
-			}
-		} else if (fileName.contains("_CC_")) {
-			boolean ccRecipientCountCheck = validateCCRecientFileType(fileName);
-			boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
-			if (!(ccRecipientCountCheck) || !validFileCheck) {
-				failedFileProcessing(xmlInputFile, currentDateTime);
-				failedFileProcessing(pdfInputFile, currentDateTime);
-			} else {
-				archiveOnlyOperation(pdfInputFile, currentDateTime);
-				archiveOnlyOperation(xmlInputFile, currentDateTime);
-				fileName = FilenameUtils.removeExtension(fileName);
-				String fileNameSplit[] = fileName.split("_");
-				int ccNumber = 0;
-				if (fileNameSplit.length >= 1) {
-					ccNumber = Integer.parseInt(fileNameSplit[fileNameSplit.length - 1]);
+		try {
+			String xmlInputFile = fileName;
+			String pdfInputFile = fileName.replace(".xml", ".pdf");
+			if (fileName.contains("archiveOnly")) {
+				boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
+				if (validFileCheck) {
+					archiveOnlyOperation(pdfInputFile, currentDateTime);
+					archiveOnlyOperation(xmlInputFile, currentDateTime);
+				} else {
+					failedFileProcessing(xmlInputFile, currentDateTime);
+					failedFileProcessing(pdfInputFile, currentDateTime);
 				}
-				primaryRecipeintOperation(xmlInputFile, pdfInputFile, ccNumber, currentDate, currentDateTime);
+			} else if (fileName.contains("printArchive") && !(fileName.contains("_CC_"))) {
+				boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
+				if (validFileCheck) {
+					archiveOnlyOperation(pdfInputFile, currentDateTime);
+					archiveOnlyOperation(xmlInputFile, currentDateTime);
+					copyFileToTargetDirectory(pdfInputFile, "", targetDirectory);
+					copyFileToTargetDirectory(xmlInputFile, "", targetDirectory);
+				} else {
+					failedFileProcessing(xmlInputFile, currentDateTime);
+					failedFileProcessing(pdfInputFile, currentDateTime);
+				}
+			} else if (fileName.contains("_CC_")) {
+				boolean ccRecipientCountCheck = validateCCRecientFileType(fileName);
+				boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
+				if (!(ccRecipientCountCheck) || !validFileCheck) {
+					failedFileProcessing(xmlInputFile, currentDateTime);
+					failedFileProcessing(pdfInputFile, currentDateTime);
+				} else {
+					archiveOnlyOperation(pdfInputFile, currentDateTime);
+					archiveOnlyOperation(xmlInputFile, currentDateTime);
+					fileName = FilenameUtils.removeExtension(fileName);
+					String fileNameSplit[] = fileName.split("_");
+					int ccNumber = 0;
+					if (fileNameSplit.length >= 1) {
+						ccNumber = Integer.parseInt(fileNameSplit[fileNameSplit.length - 1]);
+					}
+					primaryRecipeintOperation(xmlInputFile, pdfInputFile, ccNumber, currentDate, currentDateTime);
+				}
+			} else if (fileName.contains("printOnly")) {
+				exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
+				logger.info("printOnly functionality is not available ");
+				failedFileProcessing(xmlInputFile, currentDateTime);
+				failedFileProcessing(pdfInputFile, currentDateTime);
 			}
-		} else if (fileName.contains("printOnly")) {
+			new File(xmlInputFile).delete();
+			new File(pdfInputFile).delete();
+		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("printOnly functionality is not available ");
-			failedFileProcessing(xmlInputFile, currentDateTime);
-			failedFileProcessing(pdfInputFile, currentDateTime);
 		}
-		new File(xmlInputFile).delete();
-		new File(pdfInputFile).delete();
 	}
 
 	public String processMetaDataInputFile(CloudBlobDirectory transitDirectory, String currentDateTime,
@@ -378,17 +388,22 @@ public class PostProcessingScheduler {
 				statusMessage = "no file for postprocessing";
 			}
 		} catch (Exception exception) {
-			statusMessage = exception.getMessage();
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception processMetaDataInputFile()" + exception.getMessage());
 		}
 		return statusMessage;
 	}
 
 	public void failedFileProcessing(String fileName, String currentDateTime) {
-		logger.info("incorrect files for processing: " + fileName);
-		String transitTargetDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime
-				+ FAILED_SUB_DIRECTORY + "/";
-		copyFileToTargetDirectory(fileName, "", transitTargetDirectory);
+		try {
+			logger.info("incorrect files for processing: " + fileName);
+			String transitTargetDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime
+					+ FAILED_SUB_DIRECTORY + "/";
+			copyFileToTargetDirectory(fileName, "", transitTargetDirectory);
+		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
+			logger.info("incorrect files for processing: " + exception.getMessage());
+		}
 	}
 
 	private String getSheetNumber(String fileName, ListBlobItem blobItem) {
@@ -419,6 +434,7 @@ public class PostProcessingScheduler {
 			}
 			file.delete();
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception getSheetNumber()", exception.getMessage());
 		}
 		return PostProcessingConstant.MULTIPAGE;
@@ -479,14 +495,14 @@ public class PostProcessingScheduler {
 				new File(blankPage).delete();
 				deleteFiles(claimNbrSortedList);
 			} catch (StorageException storageException) {
+				exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 				logger.info("invalid file or may be banner file is missing");
-				statusMessage = storageException.getMessage();
 				if (fileNameList.size() > 0) {
 					deleteFiles(fileNameList);
 				}
 				continue;
 			} catch (Exception exception) {
-				statusMessage = exception.getMessage();
+				exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 				if (fileNameList.size() > 0) {
 					deleteFiles(fileNameList);
 				}
@@ -538,6 +554,7 @@ public class PostProcessingScheduler {
 			}
 
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception copyFileToTargetDirectory() " + exception.getMessage());
 		}
 	}
@@ -611,12 +628,17 @@ public class PostProcessingScheduler {
 	}
 
 	public String getEmptyPage() throws URISyntaxException, StorageException, FileNotFoundException, IOException {
-		CloudBlobContainer container = containerinfo();
-		CloudBlobDirectory transitDirectory = getDirectoryName(container, ROOT_DIRECTORY, BANNER_DIRECTORY);
 		String blankPage = "Blank" + ".pdf";
-		CloudBlockBlob blob = transitDirectory.getBlockBlobReference(blankPage);
-		File source = new File(blankPage);
-		blob.downloadToFile(source.getAbsolutePath());
+		try {
+			CloudBlobContainer container = containerinfo();
+			CloudBlobDirectory transitDirectory = getDirectoryName(container, ROOT_DIRECTORY, BANNER_DIRECTORY);
+			CloudBlockBlob blob = transitDirectory.getBlockBlobReference(blankPage);
+			File source = new File(blankPage);
+			blob.downloadToFile(source.getAbsolutePath());
+		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
+			logger.info("Exception containerinfo() " + exception.getMessage());
+		}
 		return blankPage;
 	}
 
@@ -627,6 +649,7 @@ public class PostProcessingScheduler {
 			CloudBlobClient serviceClient = account.createCloudBlobClient();
 			container = serviceClient.getContainerReference(containerName);
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception containerinfo() " + exception.getMessage());
 		}
 		return container;
@@ -693,7 +716,7 @@ public class PostProcessingScheduler {
 			copyFileToTargetDirectory(outputPclFile, OUTPUT_DIRECTORY + TRANSIT_DIRECTORY, "");
 			logger.info("generate pcl file is:" + outputPclFile);
 		} catch (Exception exception) {
-			statusMessage = "error in pcl generate";
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception pclFileCreation() " + exception.getMessage());
 		}
 		return statusMessage;
@@ -749,8 +772,10 @@ public class PostProcessingScheduler {
 			}
 
 		} catch (TransformerException fileTransferException) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("file trans former exception" + fileTransferException.getMessage());
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception archiveFileRemoveElement() " + exception.getMessage());
 		}
 		return updatedFile;
@@ -806,8 +831,10 @@ public class PostProcessingScheduler {
 			}
 
 		} catch (TransformerException fileTransferException) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception archiveFileRemoveElement() " + fileTransferException.getMessage());
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception archiveFileRemoveElement() " + exception.getMessage());
 		}
 	}
@@ -829,6 +856,7 @@ public class PostProcessingScheduler {
 			document = builder.parse(new File(fileName));
 			document.getDocumentElement().normalize();
 		} catch (Exception documentException) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception xmlFileDocumentReader() :" + documentException.getMessage());
 		}
 		return document;
@@ -881,6 +909,7 @@ public class PostProcessingScheduler {
 			deleteFiles(pdfListFile);
 			updatePrimaryFileName.delete();
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("exception:" + exception.getMessage());
 		}
 	}
@@ -933,6 +962,7 @@ public class PostProcessingScheduler {
 			updateXmlFile.delete();
 
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("exception primaryRecipeintOperation() " + exception.getMessage());
 		}
 	}
@@ -977,6 +1007,7 @@ public class PostProcessingScheduler {
 			}
 			xmlFile.delete();
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception splitCCRecipeintXmlFile() " + exception.getMessage());
 		}
 	}
@@ -1002,6 +1033,7 @@ public class PostProcessingScheduler {
 			writer.close();
 			file.delete();
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception addAttachment() :" + exception.getMessage());
 		}
 	}
@@ -1032,6 +1064,7 @@ public class PostProcessingScheduler {
 			Document document = builder.parse(new File(fileName));
 			document.getDocumentElement().normalize();
 		} catch (Exception documentException) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("invalid xml for processing :" + fileName + " " + documentException.getMessage());
 			validaXmlFile = false;
 			invalidFileList.add(fileName);
@@ -1061,6 +1094,7 @@ public class PostProcessingScheduler {
 				validXmlFile = false;
 			}
 		} catch (Exception exception) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception validateCCRecientXmlInputFile() " + exception.getMessage());
 		}
 		return validXmlFile;
@@ -1076,6 +1110,7 @@ public class PostProcessingScheduler {
 		boolean validBatchType = true;
 		boolean batchTypeCheckOperation = checkBatchTypeOperation(fileName, batchDetailsList);
 		if (!batchTypeCheckOperation) {
+			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			String xmlInputFile = fileName;
 			String pdfInputFile = fileName.replace(".xml", ".pdf");
 			invalidFileList.add(xmlInputFile);
@@ -1090,12 +1125,15 @@ public class PostProcessingScheduler {
 
 	public String ediFormsBannerFileGenerate(String fileName, ListBlobItem blobItem) {
 		String sheetCount = getSheetNumber(fileName, blobItem);
+		String fileNameNoExt = FilenameUtils.removeExtension(fileName);
+		String[] ediFormList = StringUtils.split(fileNameNoExt, "_");
+		String ediForm = ediFormList.length > 0 ? ediFormList[2] : "";
 		if (sheetCount.equals("2")) {
-			sheetCount = "Page2_" + PostProcessingConstant.PAATTACHEDIBATCH;
+			sheetCount = "Page2_" + ediForm;
 		} else if (sheetCount.equals("3")) {
-			sheetCount = "Page3_" + PostProcessingConstant.PAATTACHEDIBATCH;
+			sheetCount = "Page3_" + ediForm;
 		} else {
-			sheetCount = "Default_" + PostProcessingConstant.PAATTACHEDIBATCH;
+			sheetCount = "Default_" + ediForm;
 		}
 		return sheetCount;
 	}
