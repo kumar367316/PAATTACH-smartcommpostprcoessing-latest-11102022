@@ -178,6 +178,7 @@ public class PostProcessingScheduler {
 		Iterable<BlobItem> listBlobs = blobContainerClient.listBlobsByHierarchy(sourceDirectory);
 		String targetProcessedPrintDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime
 				+ PRINT_SUB_DIRECTORY + "/";
+		List<String> batchDetailsList = postProcessingBatchDetails();
 		try {
 			CloudBlobDirectory archiveDirectory = getDirectoryName(container, "", OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY);
 			for (BlobItem blobItem : listBlobs) {
@@ -195,7 +196,7 @@ public class PostProcessingScheduler {
 				srcBlobClient.delete();
 				if (fileExt.equals("xml")) {
 					boolean validXmlInputFIle = xmlFileDocumentReader(fileName, currentDate, currentDateTime);
-					boolean validBatchType = checkBatchTypeOperation(fileName, currentDate, currentDateTime);
+					boolean validBatchType = checkBatchTypeOperation(fileName, batchDetailsList, currentDateTime);
 					if (!validXmlInputFIle || !validBatchType) {
 						continue;
 					}
@@ -559,9 +560,8 @@ public class PostProcessingScheduler {
 		return false;
 	}
 
-	public boolean checkBatchTypeOperation(String fileName) {
-		String[] batchTypeList = PostProcessingConstant.ALL_BATCH_TYPE.split(",");
-		for (String ediFormName : batchTypeList) {
+	public boolean checkBatchTypeOperation(String fileName, List<String> batchDetailsList) {
+		for (String ediFormName : batchDetailsList) {
 			if (fileName.contains(ediFormName)) {
 				return true;
 			}
@@ -1072,9 +1072,9 @@ public class PostProcessingScheduler {
 		return updateCCNumber.matches(".*\\d.*");
 	}
 
-	public boolean checkBatchTypeOperation(String fileName, String currentDate, String currentDateTime) {
+	public boolean checkBatchTypeOperation(String fileName, List<String> batchDetailsList, String currentDateTime) {
 		boolean validBatchType = true;
-		boolean batchTypeCheckOperation = checkBatchTypeOperation(fileName);
+		boolean batchTypeCheckOperation = checkBatchTypeOperation(fileName, batchDetailsList);
 		if (!batchTypeCheckOperation) {
 			String xmlInputFile = fileName;
 			String pdfInputFile = fileName.replace(".xml", ".pdf");
@@ -1098,5 +1098,19 @@ public class PostProcessingScheduler {
 			sheetCount = "Default_" + PostProcessingConstant.PAATTACHEDIBATCH;
 		}
 		return sheetCount;
+	}
+
+	public List<String> postProcessingBatchDetails() {
+		List<String> batchDetailsList = new LinkedList<String>();
+		for (String stateBatch : stateBatchType) {
+			batchDetailsList.add(stateBatch);
+		}
+		for (String pageBatch : pageTypeList) {
+			batchDetailsList.add(pageBatch);
+		}
+		for (String ediBatch : ediFormsType) {
+			batchDetailsList.add(ediBatch);
+		}
+		return batchDetailsList;
 	}
 }
