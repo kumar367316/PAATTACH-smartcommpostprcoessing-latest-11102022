@@ -17,7 +17,6 @@ import static com.custom.postprocessing.constant.PostProcessingConstant.PROCESS_
 import static com.custom.postprocessing.constant.PostProcessingConstant.ROOT_DIRECTORY;
 import static com.custom.postprocessing.constant.PostProcessingConstant.SPACE_VALUE;
 import static com.custom.postprocessing.constant.PostProcessingConstant.TRANSIT_DIRECTORY;
-import static com.custom.postprocessing.constant.PostProcessingConstant.PAATTACHFORMNAME;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -126,9 +125,6 @@ public class PostProcessingScheduler {
 
 	@Value("${selfAddressed-type}")
 	private String selfAddressedType;
-
-	@Value("#{'${all-batch-type}'.split(',')}")
-	private List<String> batchTypeCheck;
 
 	@Autowired
 	private PostProcessUtil postProcessUtil;
@@ -481,7 +477,7 @@ public class PostProcessingScheduler {
 
 				convertPDFToPCL(mergePdfFile, container, currentDateTime);
 				bannerFile.delete();
-				new File(mergePdfFile).delete();
+				//new File(mergePdfFile).delete();
 				new File(blankPage).delete();
 				deleteFiles(claimNbrSortedList);
 			} catch (StorageException storageException) {
@@ -567,7 +563,8 @@ public class PostProcessingScheduler {
 	}
 
 	public boolean checkBatchTypeOperation(String fileName) {
-		for (String ediFormName : batchTypeCheck) {
+		String[] batchTypeList =  PostProcessingConstant.ALL_BATCH_TYPE.split(",");
+		for (String ediFormName : batchTypeList) {
 			if (fileName.contains(ediFormName)) {
 				return true;
 			}
@@ -1104,11 +1101,11 @@ public class PostProcessingScheduler {
 	public String ediFormsBannerFileGenerate(String fileName, ListBlobItem blobItem) {
 		String sheetCount = getSheetNumber(fileName, blobItem);
 		if (sheetCount.equals("2")) {
-			sheetCount = "Page2_" + PAATTACHFORMNAME;
+			sheetCount = "Page2_" + PostProcessingConstant.PAATTACHEDIBATCH;
 		} else if (sheetCount.equals("3")) {
-			sheetCount = "Page3_" + PAATTACHFORMNAME;
+			sheetCount = "Page3_" + PostProcessingConstant.PAATTACHEDIBATCH;
 		} else {
-			sheetCount = "Default_" + PAATTACHFORMNAME;
+			sheetCount = "Default_" + PostProcessingConstant.PAATTACHEDIBATCH;
 		}
 		return sheetCount;
 	}
