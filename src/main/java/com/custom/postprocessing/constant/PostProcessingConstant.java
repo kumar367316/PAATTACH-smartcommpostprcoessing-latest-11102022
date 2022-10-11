@@ -27,5 +27,4 @@ public class PostProcessingConstant {
 	public static final String OUTPUT_DIRECTORY = "output/";
 	public static final String LOG_FILE = "smartcommpostprocessing";
 	public static final String MAIL_FAILURE = "mail sending failure";
-	public static final String ALL_BATCH_TYPE = "_AZ,_DC,_DE,_MD,_MI,_NY,_PA,_SC,_SelfAddressed,_PG,_Page,_PAATTACH";
 }
