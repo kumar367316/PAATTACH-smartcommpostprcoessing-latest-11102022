@@ -323,23 +323,23 @@ public class PostProcessingScheduler {
 							new File(fileName).delete();
 							continue;
 						}
-						String sheetCount = ediFormsBannerFileGenerate(fileName, blobItem);
-						prepareMap(postProcessMap, sheetCount, StringUtils.replace(fileName, ".xml", ".pdf"));
+						String ediBannerPage = ediFormsBannerFileGenerate(fileName, blobItem);
+						prepareMap(postProcessMap, ediBannerPage, StringUtils.replace(fileName, ".xml", ".pdf"));
 					} else if (fileName.contains("_CC_") && !(fileName.contains("_Primary"))) {
 						if ("pdf".equals(FilenameUtils.getExtension(fileName))) {
 							new File(fileName).delete();
 							continue;
 						}
-						String sheetCount = ediFormsBannerFileGenerate(fileName, blobItem);
-						prepareMap(postProcessMap, sheetCount, StringUtils.replace(fileName, ".xml", ".pdf"));
+						String ediBannerPage = ediFormsBannerFileGenerate(fileName, blobItem);
+						prepareMap(postProcessMap, ediBannerPage, StringUtils.replace(fileName, ".xml", ".pdf"));
 					} else if (fileName.contains("_Primary")) {
 						if ("pdf".equals(FilenameUtils.getExtension(fileName))) {
 							new File(fileName).delete();
 							continue;
 						}
 
-						String sheetCount = ediFormsBannerFileGenerate(fileName, blobItem);
-						prepareMap(postProcessMap, sheetCount, StringUtils.replace(fileName, ".xml", ".pdf"));
+						String ediBannerPage = ediFormsBannerFileGenerate(fileName, blobItem);
+						prepareMap(postProcessMap, ediBannerPage, StringUtils.replace(fileName, ".xml", ".pdf"));
 					}
 				} else if (checkPageType(fileName)) {
 					if ("pdf".equals(FilenameUtils.getExtension(fileName))) {
@@ -355,11 +355,11 @@ public class PostProcessingScheduler {
 							continue;
 						}
 						String fileNameNoExt = FilenameUtils.removeExtension(fileName);
-						String[] stateAndSheetNameList = StringUtils.split(fileNameNoExt, "_");
-						String stateAndSheetName = stateAndSheetNameList.length > 0
-								? stateAndSheetNameList[stateAndSheetNameList.length - 1]
+						String[] selfAddressedTypeList = StringUtils.split(fileNameNoExt, "_");
+						String selfAddressedType = selfAddressedTypeList.length > 0
+								? selfAddressedTypeList[selfAddressedTypeList.length - 1]
 								: "";
-						prepareMap(postProcessMap, stateAndSheetName, fileName);
+						prepareMap(postProcessMap, selfAddressedType, fileName);
 					} else if (fileName.contains("_CC_") && !(fileName.contains("_Primary"))) {
 						if ("pdf".equals(FilenameUtils.getExtension(fileName))) {
 							new File(fileName).delete();
@@ -1124,18 +1124,18 @@ public class PostProcessingScheduler {
 	}
 
 	public String ediFormsBannerFileGenerate(String fileName, ListBlobItem blobItem) {
-		String sheetCount = getSheetNumber(fileName, blobItem);
+		String ediFormValue = getSheetNumber(fileName, blobItem);
 		String fileNameNoExt = FilenameUtils.removeExtension(fileName);
 		String[] ediFormList = StringUtils.split(fileNameNoExt, "_");
 		String ediForm = ediFormList.length > 0 ? ediFormList[2] : "";
-		if (sheetCount.equals("2")) {
-			sheetCount = "Page2_" + ediForm;
-		} else if (sheetCount.equals("3")) {
-			sheetCount = "Page3_" + ediForm;
+		if (ediFormValue.equals("2")) {
+			ediFormValue = ediForm + ediFormValue;
+		} else if (ediFormValue.equals("3")) {
+			ediFormValue = ediForm + ediFormValue;
 		} else {
-			sheetCount = "Default_" + ediForm;
+			ediFormValue = ediForm+"Default";
 		}
-		return sheetCount;
+		return ediFormValue;
 	}
 
 	public List<String> postProcessingBatchDetails() {
