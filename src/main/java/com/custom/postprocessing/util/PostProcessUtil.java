@@ -12,7 +12,7 @@ public class PostProcessUtil {
 
 	public String getFileType(String fileType) {
 		if (fileType.matches(".*[0-9].*")) {
-			if (!(fileType.contains("Attach"))) {
+			if (!(fileType.contains("ATTACH"))) {
 				fileType = "page" + fileType;
 			}
 		}
