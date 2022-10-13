@@ -142,8 +142,9 @@ public class PostProcessingScheduler {
 		String statusMessage = "SmartComm PostProcessing Successfully";
 		logger.info("postprocessing started");
 		try {
-			deletePreviousLogFile();
 			final CloudBlobContainer container = containerinfo();
+			deleteCompletedTxtFile(container);
+			deletePreviousLogFile();
 			String targetTempDirectory = OUTPUT_DIRECTORY + ARCHIVE_TEMP_BACKUP_DIRECTORY + "temp-archive_"
 					+ currentDateTime + "/";
 			moveSourceToTargetDirectory(OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY, targetTempDirectory, currentDate,
@@ -693,6 +694,18 @@ public class PostProcessingScheduler {
 		}
 	}
 
+	public void deleteCompletedTxtFile(CloudBlobContainer container) {
+		try {
+			String completedTxtFile = "process-completed" + ".txt";
+			CloudBlobDirectory transitDirectory = getDirectoryName(container, OUTPUT_DIRECTORY,
+					TRANSIT_DIRECTORY + "/");
+			CloudBlockBlob blob = transitDirectory.getBlockBlobReference(completedTxtFile);
+			blob.deleteIfExists();
+		} catch (Exception exception) {
+			logger.info("Exception pclFileCreation() " + exception.getMessage());
+		}
+	}
+
 	public String getFileName(String sourceDirectory, String blobName) {
 		String updateInputFIle = blobName.replace(sourceDirectory, "");
 		return updateInputFIle;
@@ -714,7 +727,7 @@ public class PostProcessingScheduler {
 			outStream.close();
 			fileEditor.setCloseConcatenatedStreams(true);
 			copyFileToTargetDirectory(outputPclFile, OUTPUT_DIRECTORY + TRANSIT_DIRECTORY, "");
-			logger.info("generated pcl file is:" + outputPclFile);
+			logger.info("generate pcl file is:" + outputPclFile);
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception pclFileCreation() " + exception.getMessage());
@@ -1133,7 +1146,7 @@ public class PostProcessingScheduler {
 		} else if (ediFormValue.equals("3")) {
 			ediFormValue = ediForm + ediFormValue;
 		} else {
-			ediFormValue = ediForm+"Default";
+			ediFormValue = ediForm + "Default";
 		}
 		return ediFormValue;
 	}
