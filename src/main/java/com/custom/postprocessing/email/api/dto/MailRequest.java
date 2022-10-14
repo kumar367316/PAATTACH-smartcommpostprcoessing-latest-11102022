@@ -14,7 +14,7 @@ public class MailRequest {
 
 	private String to;
 	private String from;
-	private String mailStatusMessage;
+	private String mailSubjectMessage;
 	private List<String> pclFileNames;
 
 	public String getTo() {
@@ -33,12 +33,12 @@ public class MailRequest {
 		this.from = from;
 	}
 
-	public String getMailStatusMessage() {
-		return mailStatusMessage;
+	public String getMailSubjectMessage() {
+		return mailSubjectMessage;
 	}
 
-	public void setMailStatusMessage(String mailStatusMessage) {
-		this.mailStatusMessage = mailStatusMessage;
+	public void setMailSubjectMessage(String mailSubjectMessage) {
+		this.mailSubjectMessage = mailSubjectMessage;
 	}
 
 	public List<String> getPclFileNames() {
