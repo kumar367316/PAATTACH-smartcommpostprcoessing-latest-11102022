@@ -18,6 +18,7 @@ public class MailResponse {
 	private String message;
 	private boolean status;
 	private File file;
+	private String errorMessage;
 	
 	public String getMessage() {
 		return message;
@@ -37,5 +38,10 @@ public class MailResponse {
 	public void setFile(File file) {
 		this.file = file;
 	}
-	
+	public String getErrorMessage() {
+		return errorMessage;
+	}
+	public void setErrorMessage(String errorMessage) {
+		this.errorMessage = errorMessage;
+	}
 }
