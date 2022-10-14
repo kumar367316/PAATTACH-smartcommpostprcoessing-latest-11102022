@@ -76,6 +76,7 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobItem;
 import com.custom.postprocessing.constant.PostProcessingConstant;
+import com.custom.postprocessing.email.api.dto.MailResponse;
 import com.custom.postprocessing.util.EmailUtility;
 import com.custom.postprocessing.util.PostProcessUtil;
 import com.microsoft.azure.storage.CloudStorageAccount;
@@ -128,7 +129,7 @@ public class PostProcessingScheduler {
 	private PostProcessUtil postProcessUtil;
 
 	List<String> invalidFileList = new LinkedList<>();
-	
+
 	List<String> pclFileList = new LinkedList<>();
 
 	String exceptionMessage = "";
@@ -514,13 +515,14 @@ public class PostProcessingScheduler {
 			}
 		}
 		if (postProcessMap.size() > 0) {
-			emailUtility.emailProcess(pclFileList, currentDate,
+			MailResponse mailResponse = emailUtility.emailProcess(pclFileList, currentDate,
 					"PCL Creation process is completed successfully " + currentDate);
+			exceptionMessage = mailResponse.getErrorMessage();
 		}
 		File licenseFile = new File(licenseFileName);
 		licenseFile.delete();
-        deleteFiles(pclFileList);
-        pclFileList.clear();
+		deleteFiles(pclFileList);
+		pclFileList.clear();
 		return statusMessage;
 	}
 
@@ -613,7 +615,7 @@ public class PostProcessingScheduler {
 	}
 
 	public void prepareMap(Map<String, List<String>> postProcessMap, String key, String fileName) {
-		if(postProcessMap.containsKey(key)) {
+		if (postProcessMap.containsKey(key)) {
 			List<String> existingFileNameList = postProcessMap.get(key);
 			existingFileNameList.add(fileName);
 			postProcessMap.put(key, existingFileNameList);
@@ -934,7 +936,7 @@ public class PostProcessingScheduler {
 	}
 
 	public void primaryRecipientOperation(String xmlFile, String pdfFile, int ccNumberCount, String currentDate,
-										  String currentDateTime) {
+			String currentDateTime) {
 		try {
 			File pdfInputFile = new File(pdfFile.toString());
 			splitCCRecipientPDFFile(pdfInputFile, ccNumberCount, currentDate, currentDateTime);
@@ -987,7 +989,7 @@ public class PostProcessingScheduler {
 	}
 
 	public void splitCCRRecipientXmlFile(File xmlFile, Integer sheetNumber, Integer numberOfPages, int ccNumberCount,
-										 String currentDate, String currentDateTime) {
+			String currentDate, String currentDateTime) {
 		String fileName = xmlFile.toString();
 		try {
 			for (int i = 1; i <= ccNumberCount; i++) {
