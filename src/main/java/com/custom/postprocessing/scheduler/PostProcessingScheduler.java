@@ -124,6 +124,9 @@ public class PostProcessingScheduler {
 
 	@Value("${selfAddressed-type}")
 	private String selfAddressedType;
+	
+	@Value("${mail-pcl-subject}")
+	private String mailPclSubject;
 
 	@Autowired
 	private PostProcessUtil postProcessUtil;
@@ -516,7 +519,7 @@ public class PostProcessingScheduler {
 		}
 		if (postProcessMap.size() > 0) {
 			MailResponse mailResponse = emailUtility.emailProcess(pclFileList, currentDate,
-					"PCL Creation process is completed successfully " + currentDate);
+					mailPclSubject + "-" + currentDate);
 			exceptionMessage = mailResponse.getErrorMessage();
 		}
 		File licenseFile = new File(licenseFileName);
