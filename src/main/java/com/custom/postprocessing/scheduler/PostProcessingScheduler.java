@@ -128,6 +128,8 @@ public class PostProcessingScheduler {
 	private PostProcessUtil postProcessUtil;
 
 	List<String> invalidFileList = new LinkedList<>();
+	
+	List<String> pclFileList = new LinkedList<>();
 
 	String exceptionMessage = "";
 
@@ -511,9 +513,14 @@ public class PostProcessingScheduler {
 				continue;
 			}
 		}
+		if (postProcessMap.size() > 0) {
+			emailUtility.emailProcess(pclFileList, currentDate,
+					"PCL Creation process is completed successfully " + currentDate);
+		}
 		File licenseFile = new File(licenseFileName);
 		licenseFile.delete();
-
+        deleteFiles(pclFileList);
+        pclFileList.clear();
 		return statusMessage;
 	}
 
@@ -726,6 +733,7 @@ public class PostProcessingScheduler {
 			stream.close();
 			outStream.close();
 			fileEditor.setCloseConcatenatedStreams(true);
+			pclFileList.add(outputPclFile);
 			copyFileToTargetDirectory(outputPclFile, OUTPUT_DIRECTORY + TRANSIT_DIRECTORY, "");
 			logger.info("generate pcl file is:" + outputPclFile);
 		} catch (Exception exception) {
