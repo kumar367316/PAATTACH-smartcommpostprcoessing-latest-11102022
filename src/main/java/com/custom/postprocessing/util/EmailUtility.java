@@ -36,9 +36,6 @@ public class EmailUtility {
 
 	@Value("${mail-to}")
 	private String mailTo;
-	/*
-	 * @Value("${mail-pcl-subject}") private String postProcessingSubject;
-	 */
 
 	@Value("${mail-smtp-starttls-key}")
 	private String starttlsKey;
@@ -63,6 +60,8 @@ public class EmailUtility {
 
 	@Value("${mail-smtp-auth-value}")
 	private String authValue;
+	
+	String exceptionMessage = "";
 
 	public MailResponse sendEmail(MailRequest request, String currentDate) {
 		MailResponse response = new MailResponse();
@@ -76,10 +75,10 @@ public class EmailUtility {
 			MimeMessage message = new MimeMessage(session);
 			message.setFrom(new InternetAddress(mailForm));
 			message.setRecipient(RecipientType.TO, new InternetAddress(mailTo));
-			message.setSubject("SmartComm PostProcessing status" + " " + currentDate);
+			message.setSubject("SmartComm PostProcessing status " + currentDate);
 			StringBuilder builder = new StringBuilder();
 			if (request.getPclFileNames().size() >= 1) {
-				builder.append("SmartComm PostProcessing has completed successfully");
+				builder.append(request.getMailSubjectMessage());
 				builder.append("<html><body><div>Summary</div><br/>"
 						+ "<table style='border:2px solid black'>process pcl file list<br/>");
 				builder.append("<tr><th>PCL FILE NAME</th></tr>");
@@ -101,32 +100,38 @@ public class EmailUtility {
 			logger.info("email address invalid sendEmail() address exception type" + addressException.getMessage());
 			response.setMessage(PostProcessingConstant.MAIL_FAILURE);
 			response.setStatus(Boolean.FALSE);
+			response.setErrorMessage(PostProcessingConstant.EXCEPTION_MSG);
 		} catch (MessagingException messageException) {
 			logger.info("message invalid sendEmail() message exception:" + messageException.getMessage());
 			response.setMessage(PostProcessingConstant.MAIL_FAILURE);
 			response.setStatus(Boolean.FALSE);
+			response.setErrorMessage(PostProcessingConstant.EXCEPTION_MSG);
 		} catch (Exception exception) {
 			logger.info("exception sendEmail() :" + exception.getMessage());
 			response.setMessage(PostProcessingConstant.MAIL_FAILURE);
 			response.setStatus(Boolean.FALSE);
+			response.setErrorMessage(PostProcessingConstant.EXCEPTION_MSG);
 		}
 		return response;
 	}
 
-	public void emailProcess(List<String> pclFileList, String currentDate, String mailStatusMessage) {
+	public MailResponse emailProcess(List<String> pclFileList, String currentDate, String mailStatusMessage) {
+		MailResponse mailResponse = new MailResponse();
 		try {
 			MailRequest mailRequest = new MailRequest();
 			mailRequest.setFrom(mailForm);
 			mailRequest.setTo(mailTo);
-			mailRequest.setMailStatusMessage(mailStatusMessage);
+			mailRequest.setMailSubjectMessage(mailStatusMessage);
 			mailRequest.setPclFileNames(pclFileList);
 
-			MailResponse mailResponse = sendEmail(mailRequest, currentDate);
+			mailResponse = sendEmail(mailRequest, currentDate);
 			if (Objects.nonNull(mailResponse.getFile()))
 				mailResponse.getFile().delete();
 		} catch (Exception exception) {
 			logger.info("exception emailProcess():" + exception.getMessage());
+			mailResponse.setErrorMessage(PostProcessingConstant.EXCEPTION_MSG);
 		}
+		return mailResponse;
 	}
 
 	public void addFileNameList(List<String> fileNames, List<String> updateFileNames) {
