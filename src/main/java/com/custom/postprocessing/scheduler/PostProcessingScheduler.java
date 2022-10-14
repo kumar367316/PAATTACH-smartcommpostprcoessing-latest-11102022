@@ -735,7 +735,7 @@ public class PostProcessingScheduler {
 			fileEditor.setCloseConcatenatedStreams(true);
 			pclFileList.add(outputPclFile);
 			copyFileToTargetDirectory(outputPclFile, OUTPUT_DIRECTORY + TRANSIT_DIRECTORY, "");
-			logger.info("generate pcl file is:" + outputPclFile);
+			logger.info("generated pcl file is:" + outputPclFile);
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception pclFileCreation() " + exception.getMessage());
