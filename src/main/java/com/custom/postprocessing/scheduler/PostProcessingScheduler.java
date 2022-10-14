@@ -144,7 +144,7 @@ public class PostProcessingScheduler {
 		String statusMessage = "SmartComm PostProcessing Successfully";
 		logger.info("postprocessing started");
 		try {
-			final CloudBlobContainer container = containerinfo();
+			final CloudBlobContainer container = containerInfo();
 			deleteCompletedTxtFile(container);
 			deletePreviousLogFile();
 			String targetTempDirectory = OUTPUT_DIRECTORY + ARCHIVE_TEMP_BACKUP_DIRECTORY + "temp-archive_"
@@ -245,7 +245,7 @@ public class PostProcessingScheduler {
 					failedFileProcessing(pdfInputFile, currentDateTime);
 				}
 			} else if (fileName.contains("_CC_")) {
-				boolean ccRecipientCountCheck = validateCCRecientFileType(fileName);
+				boolean ccRecipientCountCheck = validateCCRRecentFileType(fileName);
 				boolean validFileCheck = inputXmlFileValidation(xmlInputFile);
 				if (!(ccRecipientCountCheck) || !validFileCheck) {
 					failedFileProcessing(xmlInputFile, currentDateTime);
@@ -259,7 +259,7 @@ public class PostProcessingScheduler {
 					if (fileNameSplit.length >= 1) {
 						ccNumber = Integer.parseInt(fileNameSplit[fileNameSplit.length - 1]);
 					}
-					primaryRecipeintOperation(xmlInputFile, pdfInputFile, ccNumber, currentDate, currentDateTime);
+					primaryRecipientOperation(xmlInputFile, pdfInputFile, ccNumber, currentDate, currentDateTime);
 				}
 			} else if (fileName.contains("printOnly")) {
 				exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
@@ -284,8 +284,8 @@ public class PostProcessingScheduler {
 			for (ListBlobItem blobItem : blobList) {
 				String fileName = getFileNameFromBlobURI(blobItem.getUri()).replace(SPACE_VALUE, EMPTY_SPACE);
 				logger.info("process file:" + fileName);
-				CloudBlockBlob intialFileDownload = transitDirectory.getBlockBlobReference(fileName);
-				intialFileDownload.downloadToFile(fileName);
+				CloudBlockBlob initialFileDownload = transitDirectory.getBlockBlobReference(fileName);
+				initialFileDownload.downloadToFile(fileName);
 				boolean stateType = checkStateType(fileName);
 				boolean ediFormsType = checkEdiFormsType(fileName);
 				if (stateType) {
@@ -426,7 +426,7 @@ public class PostProcessingScheduler {
 			Document document = xmlFileDocumentReader(fileName);
 			Element root = document.getDocumentElement();
 			if (Objects.isNull(root.getElementsByTagName("totalSheet").item(0))) {
-				logger.info("xml file doesn't conains totalSheet element tag:" + fileName);
+				logger.info("xml file don't have totalSheet element tag:" + fileName);
 				file.delete();
 				return PostProcessingConstant.ZEROPAGE;
 			}
@@ -454,7 +454,7 @@ public class PostProcessingScheduler {
 			throws IOException {
 		String statusMessage = "SmartComm PostProcessing completed successfully";
 		List<String> fileNameList = new LinkedList<>();
-		CloudBlobContainer container = containerinfo();
+		CloudBlobContainer container = containerInfo();
 		MemoryUsageSetting memoryUsageSetting = MemoryUsageSetting.setupMainMemoryOnly();
 		for (String fileType : postProcessMap.keySet()) {
 			try {
@@ -537,7 +537,7 @@ public class PostProcessingScheduler {
 			blob.downloadToFile(new File(licenseFileName).getAbsolutePath());
 			License license = new License();
 			license.setLicense(licenseFileName);
-			statusMessage = pclFileCreation(mergePdfFile, outputPclFile, currentDateTime);
+			pclFileCreation(mergePdfFile, outputPclFile, currentDateTime);
 		} catch (Exception exception) {
 			statusMessage = "The license has expired:no need to print pcl file with evaluation copies";
 		}
@@ -551,7 +551,7 @@ public class PostProcessingScheduler {
 
 	public void copyFileToTargetDirectory(String fileName, String rootDirectory, String targetDirectory) {
 		try {
-			CloudBlobContainer container = containerinfo();
+			CloudBlobContainer container = containerInfo();
 			CloudBlobDirectory processDirectory = getDirectoryName(container, rootDirectory, targetDirectory);
 			File outputFileName = new File(fileName);
 			if (outputFileName.exists()) {
@@ -613,7 +613,7 @@ public class PostProcessingScheduler {
 	}
 
 	public void prepareMap(Map<String, List<String>> postProcessMap, String key, String fileName) {
-		if (postProcessMap.containsKey(key)) {
+		if(postProcessMap.containsKey(key)) {
 			List<String> existingFileNameList = postProcessMap.get(key);
 			existingFileNameList.add(fileName);
 			postProcessMap.put(key, existingFileNameList);
@@ -626,7 +626,7 @@ public class PostProcessingScheduler {
 
 	public String getBannerPage(String key)
 			throws URISyntaxException, StorageException, FileNotFoundException, IOException {
-		CloudBlobContainer container = containerinfo();
+		CloudBlobContainer container = containerInfo();
 		CloudBlobDirectory transitDirectory = getDirectoryName(container, ROOT_DIRECTORY, BANNER_DIRECTORY);
 		String bannerFileName = BANNER_PAGE + key + ".pdf";
 		CloudBlockBlob blob = transitDirectory.getBlockBlobReference(bannerFileName);
@@ -636,21 +636,21 @@ public class PostProcessingScheduler {
 	}
 
 	public String getEmptyPage() throws URISyntaxException, StorageException, FileNotFoundException, IOException {
-		String blankPage = "Blank" + ".pdf";
+		String blankPage = "Blank.pdf";
 		try {
-			CloudBlobContainer container = containerinfo();
+			CloudBlobContainer container = containerInfo();
 			CloudBlobDirectory transitDirectory = getDirectoryName(container, ROOT_DIRECTORY, BANNER_DIRECTORY);
 			CloudBlockBlob blob = transitDirectory.getBlockBlobReference(blankPage);
 			File source = new File(blankPage);
 			blob.downloadToFile(source.getAbsolutePath());
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("Exception containerinfo() " + exception.getMessage());
+			logger.info("Exception getEmptyPage() " + exception.getMessage());
 		}
 		return blankPage;
 	}
 
-	public CloudBlobContainer containerinfo() {
+	public CloudBlobContainer containerInfo() {
 		CloudBlobContainer container = null;
 		try {
 			CloudStorageAccount account = CloudStorageAccount.parse(connectionNameKey);
@@ -658,7 +658,7 @@ public class PostProcessingScheduler {
 			container = serviceClient.getContainerReference(containerName);
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("Exception containerinfo() " + exception.getMessage());
+			logger.info("Exception containerInfo() " + exception.getMessage());
 		}
 		return container;
 	}
@@ -703,7 +703,7 @@ public class PostProcessingScheduler {
 
 	public void deleteCompletedTxtFile(CloudBlobContainer container) {
 		try {
-			String completedTxtFile = "process-completed" + ".txt";
+			String completedTxtFile = "process-completed.txt";
 			CloudBlobDirectory transitDirectory = getDirectoryName(container, OUTPUT_DIRECTORY,
 					TRANSIT_DIRECTORY + "/");
 			CloudBlockBlob blob = transitDirectory.getBlockBlobReference(completedTxtFile);
@@ -722,8 +722,7 @@ public class PostProcessingScheduler {
 		return fileName.replace(OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY, "");
 	}
 
-	public String pclFileCreation(String mergePdfFile, String outputPclFile, String currentDateTime) {
-		String statusMessage = "";
+	public void pclFileCreation(String mergePdfFile, String outputPclFile, String currentDateTime) {
 		try {
 			PdfFileEditor fileEditor = new PdfFileEditor();
 			final InputStream stream = new FileInputStream(mergePdfFile);
@@ -740,7 +739,6 @@ public class PostProcessingScheduler {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception pclFileCreation() " + exception.getMessage());
 		}
-		return statusMessage;
 	}
 
 	public String removeArchiveTotalSheetFileElement(File file, boolean renameFile, String currentDate,
@@ -794,10 +792,10 @@ public class PostProcessingScheduler {
 
 		} catch (TransformerException fileTransferException) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("file trans former exception" + fileTransferException.getMessage());
+			logger.info("file transfer exception" + fileTransferException.getMessage());
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("Exception archiveFileRemoveElement() " + exception.getMessage());
+			logger.info("Exception removeArchiveTotalSheetFileElement() " + exception.getMessage());
 		}
 		return updatedFile;
 	}
@@ -853,10 +851,10 @@ public class PostProcessingScheduler {
 
 		} catch (TransformerException fileTransferException) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("Exception archiveFileRemoveElement() " + fileTransferException.getMessage());
+			logger.info("Exception archiveOnlyOperation() " + fileTransferException.getMessage());
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("Exception archiveFileRemoveElement() " + exception.getMessage());
+			logger.info("Exception archiveOnlyOperation() " + exception.getMessage());
 		}
 	}
 
@@ -883,7 +881,7 @@ public class PostProcessingScheduler {
 		return document;
 	}
 
-	public void splitCCRecipeintPDFFile(File fileName, int recipeintCount, String currentDate, String currentDateTime) {
+	public void splitCCRecipientPDFFile(File fileName, int recipientCount, String currentDate, String currentDateTime) {
 		try {
 			PDDocument splitDocument = PDDocument.load(fileName);
 			Splitter splitter = new Splitter();
@@ -905,27 +903,27 @@ public class PostProcessingScheduler {
 			splitDocument.close();
 			MemoryUsageSetting memoryUsageSetting = MemoryUsageSetting.setupMainMemoryOnly();
 			PDFMergerUtility splitPdfMerger = new PDFMergerUtility();
-			for (int a = recipeintCount + 1; a <= count; a++) {
+			for (int a = recipientCount + 1; a <= count; a++) {
 				splitPdfMerger.addSource("split" + a + ".pdf");
 			}
 			splitPdfMerger.setDestinationFileName("primary" + ".pdf");
 			splitPdfMerger.mergeDocuments(memoryUsageSetting);
-			File primaryCCRecipeint = new File("primary" + ".pdf");
+			File primaryCCRecipient = new File("primary" + ".pdf");
 			File updatePrimaryFileName = new File(fileSplitName + "_Primary" + ".pdf");
-			primaryCCRecipeint.renameTo(updatePrimaryFileName);
+			primaryCCRecipient.renameTo(updatePrimaryFileName);
 			copyFileToTargetDirectory(updatePrimaryFileName.toString(), OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/",
 					currentDateTime + PRINT_SUB_DIRECTORY);
 
-			for (int j = 1; j <= recipeintCount; j++) {
+			for (int j = 1; j <= recipientCount; j++) {
 				PDFMergerUtility pdfMerger = new PDFMergerUtility();
 				pdfMerger.addSource("split" + j + ".pdf");
 				pdfMerger.addSource(updatePrimaryFileName.toString());
 				pdfMerger.setDestinationFileName(fileSplitName + "_" + j + ".pdf");
 				pdfMerger.mergeDocuments(memoryUsageSetting);
-				String ccRecipeintPDF = fileSplitName + "_" + j + ".pdf";
-				copyFileToTargetDirectory(ccRecipeintPDF, "",
+				String ccRecipientPDF = fileSplitName + "_" + j + ".pdf";
+				copyFileToTargetDirectory(ccRecipientPDF, "",
 						OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime + PRINT_SUB_DIRECTORY + "/");
-				new File(ccRecipeintPDF).delete();
+				new File(ccRecipientPDF).delete();
 			}
 			deleteFiles(pdfListFile);
 			updatePrimaryFileName.delete();
@@ -935,11 +933,11 @@ public class PostProcessingScheduler {
 		}
 	}
 
-	public void primaryRecipeintOperation(String xmlFile, String pdfFile, int ccNumberCount, String currentDate,
-			String currentDateTime) {
+	public void primaryRecipientOperation(String xmlFile, String pdfFile, int ccNumberCount, String currentDate,
+										  String currentDateTime) {
 		try {
 			File pdfInputFile = new File(pdfFile.toString());
-			splitCCRecipeintPDFFile(pdfInputFile, ccNumberCount, currentDate, currentDateTime);
+			splitCCRecipientPDFFile(pdfInputFile, ccNumberCount, currentDate, currentDateTime);
 			pdfInputFile.delete();
 
 			File xmlInputFile = new File(xmlFile);
@@ -978,18 +976,18 @@ public class PostProcessingScheduler {
 			copyFileToTargetDirectory(updateXmlFile.toString(), OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/",
 					currentDateTime + PRINT_SUB_DIRECTORY);
 
-			splitCCRecipeintXmlFile(updateXmlFile, sheetNumber, numberOfPages, ccNumberCount, currentDate,
+			splitCCRRecipientXmlFile(updateXmlFile, sheetNumber, numberOfPages, ccNumberCount, currentDate,
 					currentDateTime);
 			updateXmlFile.delete();
 
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("exception primaryRecipeintOperation() " + exception.getMessage());
+			logger.info("exception primaryRecipientOperation() " + exception.getMessage());
 		}
 	}
 
-	public void splitCCRecipeintXmlFile(File xmlFile, Integer sheetNumber, Integer numberOfPages, int ccNumberCount,
-			String currentDate, String currentDateTime) {
+	public void splitCCRRecipientXmlFile(File xmlFile, Integer sheetNumber, Integer numberOfPages, int ccNumberCount,
+										 String currentDate, String currentDateTime) {
 		String fileName = xmlFile.toString();
 		try {
 			for (int i = 1; i <= ccNumberCount; i++) {
@@ -1029,7 +1027,7 @@ public class PostProcessingScheduler {
 			xmlFile.delete();
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("Exception splitCCRecipeintXmlFile() " + exception.getMessage());
+			logger.info("Exception splitCCRRecipientXmlFile() " + exception.getMessage());
 		}
 	}
 
@@ -1044,7 +1042,7 @@ public class PostProcessingScheduler {
 
 	public void processCompleteFile(String currentDateTime) {
 		try {
-			String documentFileName = "process-completed" + ".txt";
+			String documentFileName = "process-completed.txt";
 			File file = new File(documentFileName);
 			final FileOutputStream outputStream = new FileOutputStream(file);
 			PrintWriter writer = new PrintWriter(outputStream);
@@ -1055,7 +1053,7 @@ public class PostProcessingScheduler {
 			file.delete();
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("Exception addAttachment() :" + exception.getMessage());
+			logger.info("Exception processCompleteFile() :" + exception.getMessage());
 		}
 	}
 
@@ -1116,12 +1114,12 @@ public class PostProcessingScheduler {
 			}
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
-			logger.info("Exception validateCCRecientXmlInputFile() " + exception.getMessage());
+			logger.info("Exception validateXmlInputFile() " + exception.getMessage());
 		}
 		return validXmlFile;
 	}
 
-	public boolean validateCCRecientFileType(String fileName) {
+	public boolean validateCCRRecentFileType(String fileName) {
 		String fileNames[] = fileName.split("_");
 		String updateCCNumber = fileNames[fileNames.length - 1];
 		return updateCCNumber.matches(".*\\d.*");
