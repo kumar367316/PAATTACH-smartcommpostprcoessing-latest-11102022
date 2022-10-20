@@ -1,7 +1,6 @@
 package com.custom.postprocessing.scheduler;
 
 import static com.custom.postprocessing.constant.PostProcessingConstant.ARCHIVE_DIRECTORY;
-import static com.custom.postprocessing.constant.PostProcessingConstant.ARCHIVE_TEMP_BACKUP_DIRECTORY;
 import static com.custom.postprocessing.constant.PostProcessingConstant.BACKSLASH_ASCII;
 import static com.custom.postprocessing.constant.PostProcessingConstant.BANNER_DIRECTORY;
 import static com.custom.postprocessing.constant.PostProcessingConstant.BANNER_PAGE;
@@ -124,7 +123,7 @@ public class PostProcessingScheduler {
 
 	@Value("${selfAddressed-type}")
 	private String selfAddressedType;
-	
+
 	@Value("${mail-pcl-subject}")
 	private String mailPclSubject;
 
@@ -151,10 +150,9 @@ public class PostProcessingScheduler {
 			final CloudBlobContainer container = containerInfo();
 			deleteCompletedTxtFile(container);
 			deletePreviousLogFile();
-			String targetTempDirectory = OUTPUT_DIRECTORY + ARCHIVE_TEMP_BACKUP_DIRECTORY + "temp-archive_"
-					+ currentDateTime + "/";
-			moveSourceToTargetDirectory(OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY, targetTempDirectory, currentDate,
-					currentDateTime, container);
+			String tempDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime + "-temp" + "/";
+			moveFilesToTempBackup(OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY, tempDirectory);
+			moveSourceToTargetDirectory(tempDirectory, currentDate, currentDateTime, container);
 			String transitPrintTargetDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime
 					+ PRINT_SUB_DIRECTORY + "/";
 			CloudBlobDirectory printDirectory = getDirectoryName(container, "", transitPrintTargetDirectory);
@@ -182,28 +180,40 @@ public class PostProcessingScheduler {
 		exceptionMessage = "";
 	}
 
-	private void moveSourceToTargetDirectory(String sourceDirectory, String targetDirectory, String currentDate,
-			String currentDateTime, CloudBlobContainer container) throws StorageException, IOException {
+	private void moveFilesToTempBackup(String sourceDirectory, String targetDirectory) {
+		BlobContainerClient blobContainerClient = getBlobContainerClient(connectionNameKey, containerName);
+		Iterable<BlobItem> listBlobs = blobContainerClient.listBlobsByHierarchy(sourceDirectory);
+		for (BlobItem blobItem : listBlobs) {
+			String fileName = getFileName(blobItem.getName());
+			BlobClient dstBlobClient = blobContainerClient.getBlobClient(targetDirectory + fileName);
+			BlobClient srcBlobClient = blobContainerClient.getBlobClient(blobItem.getName());
+			String updateSrcUrl = srcBlobClient.getBlobUrl();
+			if (srcBlobClient.getBlobUrl().contains(BACKSLASH_ASCII)) {
+				updateSrcUrl = srcBlobClient.getBlobUrl().replace(BACKSLASH_ASCII, FILE_SEPARATION);
+			}
+			dstBlobClient.beginCopy(updateSrcUrl, null);
+			srcBlobClient.delete();
+		}
+	}
+
+	public String getFileName(String blobName) {
+		return blobName.replace(OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY, "");
+	}
+
+	private void moveSourceToTargetDirectory(String sourceDirectory, String currentDate, String currentDateTime,
+			CloudBlobContainer container) throws StorageException, IOException {
 		BlobContainerClient blobContainerClient = getBlobContainerClient(connectionNameKey, containerName);
 		Iterable<BlobItem> listBlobs = blobContainerClient.listBlobsByHierarchy(sourceDirectory);
 		String targetProcessedPrintDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime
 				+ PRINT_SUB_DIRECTORY + "/";
 		List<String> batchDetailsList = postProcessingBatchDetails();
 		try {
-			CloudBlobDirectory archiveDirectory = getDirectoryName(container, "", OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY);
+			CloudBlobDirectory archiveDirectory = getDirectoryName(container, "", sourceDirectory);
 			for (BlobItem blobItem : listBlobs) {
-				String fileName = findActualFileName(blobItem.getName());
+				String fileName = findActualFileName(blobItem.getName(), sourceDirectory);
 				String fileExt = FilenameUtils.getExtension(fileName);
-				BlobClient dstBlobClient = blobContainerClient.getBlobClient(targetDirectory + fileName);
-				BlobClient srcBlobClient = blobContainerClient.getBlobClient(blobItem.getName());
-				String updateSrcUrl = srcBlobClient.getBlobUrl();
-				if (srcBlobClient.getBlobUrl().contains(BACKSLASH_ASCII)) {
-					updateSrcUrl = srcBlobClient.getBlobUrl().replace(BACKSLASH_ASCII, FILE_SEPARATION);
-				}
 				CloudBlockBlob cloudBlockBlob = archiveDirectory.getBlockBlobReference(fileName);
 				cloudBlockBlob.downloadToFile(fileName);
-				dstBlobClient.beginCopy(updateSrcUrl, null);
-				srcBlobClient.delete();
 				if (fileExt.equals("xml")) {
 					boolean validXmlInputFIle = xmlFileDocumentReader(fileName, currentDate, currentDateTime);
 					boolean validBatchType = checkBatchTypeOperation(fileName, batchDetailsList, currentDateTime);
@@ -723,8 +733,8 @@ public class PostProcessingScheduler {
 		return updateInputFIle;
 	}
 
-	public String findActualFileName(String fileName) {
-		return fileName.replace(OUTPUT_DIRECTORY + ARCHIVE_DIRECTORY, "");
+	public String findActualFileName(String fileName, String replaceFolerName) {
+		return fileName.replace(replaceFolerName, "");
 	}
 
 	public void pclFileCreation(String mergePdfFile, String outputPclFile, String currentDateTime) {
