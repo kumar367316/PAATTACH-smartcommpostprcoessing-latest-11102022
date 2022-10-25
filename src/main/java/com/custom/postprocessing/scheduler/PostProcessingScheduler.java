@@ -166,7 +166,7 @@ public class PostProcessingScheduler {
 			if (!(updateLogFile.exists())) {
 				Files.copy(logFileName.toPath(), updateLogFile.toPath());
 			}
-			copyFileToTargetDirectory(updateLogFile.toString(), ROOT_DIRECTORY, "log");
+			copyFileToTargetDirectory(updateLogFile.toString(), OUTPUT_DIRECTORY, TRANSIT_DIRECTORY + "/");
 			logFileName.delete();
 			updateLogFile.delete();
 
