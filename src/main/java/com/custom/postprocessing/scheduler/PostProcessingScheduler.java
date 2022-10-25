@@ -156,7 +156,7 @@ public class PostProcessingScheduler {
 			String transitPrintTargetDirectory = OUTPUT_DIRECTORY + TRANSIT_DIRECTORY + "/" + currentDateTime
 					+ PRINT_SUB_DIRECTORY + "/";
 			CloudBlobDirectory printDirectory = getDirectoryName(container, "", transitPrintTargetDirectory);
-			statusMessage = processMetaDataInputFile(printDirectory, currentDateTime, currentDate);
+			processMetaDataInputFile(printDirectory, currentDateTime, currentDate);
 
 			processCompleteFile(currentDateTime);
 
@@ -289,10 +289,9 @@ public class PostProcessingScheduler {
 		}
 	}
 
-	public String processMetaDataInputFile(CloudBlobDirectory transitDirectory, String currentDateTime,
+	public void processMetaDataInputFile(CloudBlobDirectory transitDirectory, String currentDateTime,
 			String currentDate) {
 		Map<String, List<String>> postProcessMap = new HashMap<>();
-		String statusMessage = "SmartComm PostProcessing completed successfully";
 		try {
 			Iterable<ListBlobItem> blobList = transitDirectory.listBlobs();
 			for (ListBlobItem blobItem : blobList) {
@@ -400,15 +399,14 @@ public class PostProcessingScheduler {
 			}
 
 			if (postProcessMap.size() > 0) {
-				statusMessage = mergePDF(postProcessMap, currentDateTime, currentDate);
+				mergePDF(postProcessMap, currentDateTime, currentDate);
 			} else {
-				statusMessage = "no file for postprocessing";
+				logger.info("no file for postprocessing ");
 			}
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception processMetaDataInputFile()" + exception.getMessage());
 		}
-		return statusMessage;
 	}
 
 	public void failedFileProcessing(String fileName, String currentDateTime) {
@@ -464,9 +462,8 @@ public class PostProcessingScheduler {
 	}
 
 	// post merge PDF
-	public String mergePDF(Map<String, List<String>> postProcessMap, String currentDateTime, String currentDate)
+	public void mergePDF(Map<String, List<String>> postProcessMap, String currentDateTime, String currentDate)
 			throws IOException {
-		String statusMessage = "SmartComm PostProcessing completed successfully";
 		List<String> fileNameList = new LinkedList<>();
 		CloudBlobContainer container = containerInfo();
 		MemoryUsageSetting memoryUsageSetting = MemoryUsageSetting.setupMainMemoryOnly();
@@ -527,16 +524,17 @@ public class PostProcessingScheduler {
 				continue;
 			}
 		}
+
 		if (postProcessMap.size() > 0) {
 			MailResponse mailResponse = emailUtility.emailProcess(pclFileList, currentDate,
 					mailPclSubject + "-" + currentDate);
 			exceptionMessage = mailResponse.getErrorMessage();
 		}
+
 		File licenseFile = new File(licenseFileName);
 		licenseFile.delete();
 		deleteFiles(pclFileList);
 		pclFileList.clear();
-		return statusMessage;
 	}
 
 	// post processing PDF to PCL conversion
