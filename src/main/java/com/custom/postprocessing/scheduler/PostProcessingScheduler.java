@@ -541,7 +541,6 @@ public class PostProcessingScheduler {
 	public void convertPDFToPCL(String mergePdfFile, CloudBlobContainer container, String currentDateTime)
 			throws IOException {
 		String outputPclFile = FilenameUtils.removeExtension(mergePdfFile) + ".pcl";
-		String statusMessage = "pcl is created successfully";
 		try {
 			CloudBlobDirectory transitDirectory = getDirectoryName(container, ROOT_DIRECTORY, LICENSE_DIRECTORY);
 			CloudBlockBlob blob = transitDirectory.getBlockBlobReference(licenseFileName);
@@ -552,14 +551,13 @@ public class PostProcessingScheduler {
 			license.setLicense(licenseFileName);
 			pclFileCreation(mergePdfFile, outputPclFile, currentDateTime);
 		} catch (Exception exception) {
-			statusMessage = "The license has expired:no need to print pcl file with evaluation copies";
+			logger.info("The license has expired:no need to print pcl file with evaluation copies");
 		}
 		if (pclEvaluationCopies) {
-			statusMessage = "The license has expired:print pcl file with evaluation copies";
+			logger.info("The license has expired:print pcl file with evaluation copies");
 			pclFileCreation(mergePdfFile, outputPclFile, currentDateTime);
 		}
 		new File(outputPclFile).delete();
-		logger.info(statusMessage);
 	}
 
 	public void copyFileToTargetDirectory(String fileName, String rootDirectory, String targetDirectory) {
