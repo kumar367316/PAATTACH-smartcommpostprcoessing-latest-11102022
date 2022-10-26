@@ -75,7 +75,7 @@ public class EmailUtility {
 			MimeMessage message = new MimeMessage(session);
 			message.setFrom(new InternetAddress(mailForm));
 			message.setRecipient(RecipientType.TO, new InternetAddress(mailTo));
-			message.setSubject("SmartComm PostProcessing status " + currentDate);
+			message.setSubject(request.getMailSubjectMessage());
 			StringBuilder builder = new StringBuilder();
 			if (request.getPclFileNames().size() >= 1) {
 				builder.append(request.getMailSubjectMessage());
