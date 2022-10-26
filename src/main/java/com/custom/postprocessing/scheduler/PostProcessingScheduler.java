@@ -134,7 +134,7 @@ public class PostProcessingScheduler {
 
 	List<String> pclFileList = new LinkedList<>();
 
-	String exceptionMessage = "";
+	String exceptionMessage = " Successfully";
 
 	@Scheduled(cron = "${cron-job-print-interval}")
 	public void postProcessing() {
@@ -144,7 +144,7 @@ public class PostProcessingScheduler {
 	public void smartCommPostProcessing() {
 		String currentDate = currentDate();
 		String currentDateTime = currentDateTimeStamp();
-		String statusMessage = "SmartComm PostProcessing Successfully";
+		String statusMessage = "SmartComm PostProcessing";
 		logger.info("postprocessing started");
 		try {
 			final CloudBlobContainer container = containerInfo();
@@ -159,25 +159,27 @@ public class PostProcessingScheduler {
 			processMetaDataInputFile(printDirectory, currentDateTime, currentDate);
 
 			processCompleteFile(currentDateTime);
-
-			String logFile = LOG_FILE;
-			File logFileName = new File(logFile + ".log");
-			File updateLogFile = new File(logFile + "_" + currentDate + ".log");
-			if (!(updateLogFile.exists())) {
-				Files.copy(logFileName.toPath(), updateLogFile.toPath());
-			}
-			copyFileToTargetDirectory(updateLogFile.toString(), OUTPUT_DIRECTORY, TRANSIT_DIRECTORY + "/");
-			logFileName.delete();
-			updateLogFile.delete();
-
 		} catch (Exception exception) {
 			exceptionMessage = PostProcessingConstant.EXCEPTION_MSG;
 			logger.info("Exception smartComPostProcessing() " + exception.getMessage());
 		}
 		logger.info(statusMessage + exceptionMessage);
 		logger.info("postprocessing ended");
-		deleteFiles(invalidFileList);
-		exceptionMessage = "";
+		try {
+			String logFile = LOG_FILE;
+			File logFileName = new File(logFile + ".log");
+			File updateLogFile = new File(logFile + "_" + currentDate + ".log");
+			if (!(updateLogFile.exists())) {
+				Files.copy(logFileName.toPath(), updateLogFile.toPath());
+				copyFileToTargetDirectory(updateLogFile.toString(), OUTPUT_DIRECTORY, TRANSIT_DIRECTORY + "/");
+				logFileName.delete();
+				updateLogFile.delete();
+				deleteFiles(invalidFileList);
+			}
+		} catch (Exception exception) {
+			logger.info("exception:" + exception.getMessage());
+		}
+		exceptionMessage = " Successfully";
 	}
 
 	private void moveFilesToTempBackup(String sourceDirectory, String targetDirectory) {
